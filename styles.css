@@ -221,6 +221,13 @@ background:var(--overdue-bg);
 margin-top:24px;
 }
 
+.expense-chart-small{
+width:33%;
+max-width:320px;
+display:block;
+margin:0 auto;
+}
+
 .hint{
 font-size:13px;
 opacity:.8;
