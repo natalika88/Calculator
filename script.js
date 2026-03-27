@@ -14,12 +14,14 @@ const refs = {
   incomeName: document.getElementById("incomeName"),
   incomeAmount: document.getElementById("incomeAmount"),
   expenseName: document.getElementById("expenseName"),
+  expenseGroup: document.getElementById("expenseGroup"),
   expenseAmount: document.getElementById("expenseAmount"),
   planName: document.getElementById("planName"),
   planAmount: document.getElementById("planAmount"),
   planDate: document.getElementById("planDate"),
   incomeBody: document.getElementById("incomeBody"),
   expenseBody: document.getElementById("expenseBody"),
+  expenseGroupBody: document.getElementById("expenseGroupBody"),
   planBody: document.getElementById("planBody"),
   plannedMonthlyList: document.getElementById("plannedMonthlyList"),
   totalIncome: document.getElementById("totalIncome"),
@@ -192,6 +194,34 @@ function createDeleteButton(onDelete) {
   return btn
 }
 
+function colorByGroup(groupName) {
+  const palette = [
+    { bg: "#dbeafe", text: "#1e3a8a", border: "#93c5fd" },
+    { bg: "#dcfce7", text: "#14532d", border: "#86efac" },
+    { bg: "#fef3c7", text: "#78350f", border: "#fcd34d" },
+    { bg: "#fce7f3", text: "#831843", border: "#f9a8d4" },
+    { bg: "#ede9fe", text: "#4c1d95", border: "#c4b5fd" },
+    { bg: "#cffafe", text: "#164e63", border: "#67e8f9" }
+  ]
+  const key = String(groupName || "Без группы")
+  let hash = 0
+  for (let i = 0; i < key.length; i += 1) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return palette[Math.abs(hash) % palette.length]
+}
+
+function createGroupBadge(groupName) {
+  const badge = document.createElement("span")
+  badge.className = "group-badge"
+  badge.innerText = groupName
+  const color = colorByGroup(groupName)
+  badge.style.backgroundColor = color.bg
+  badge.style.color = color.text
+  badge.style.borderColor = color.border
+  return badge
+}
+
 function renderIncomes() {
   refs.incomeBody.innerHTML = ""
   state.incomes.forEach((item) => {
@@ -211,14 +241,46 @@ function renderExpenses() {
   refs.expenseBody.innerHTML = ""
   state.expenses.forEach((item) => {
     const row = refs.expenseBody.insertRow()
+    const groupName = item.group || "Без группы"
     row.insertCell(0).innerText = item.name
-    row.insertCell(1).innerText = money(item.amount)
-    const action = row.insertCell(2)
+    const groupCell = row.insertCell(1)
+    groupCell.appendChild(createGroupBadge(groupName))
+    row.insertCell(2).innerText = money(item.amount)
+    const action = row.insertCell(3)
     action.appendChild(createDeleteButton(() => {
       state.expenses = state.expenses.filter((it) => it.id !== item.id)
       saveState()
       renderAll()
     }))
+  })
+}
+
+function getExpenseGroupTotals() {
+  return state.expenses.reduce((acc, item) => {
+    const group = item.group && item.group.trim() ? item.group : "Без группы"
+    acc[group] = (acc[group] || 0) + Number(item.amount)
+    return acc
+  }, {})
+}
+
+function renderExpenseGroups() {
+  refs.expenseGroupBody.innerHTML = ""
+  const grouped = getExpenseGroupTotals()
+  const entries = Object.entries(grouped).sort((a, b) => b[1] - a[1])
+
+  if (entries.length === 0) {
+    const row = refs.expenseGroupBody.insertRow()
+    const cell = row.insertCell(0)
+    cell.colSpan = 2
+    cell.innerText = "Нет расходов для группировки"
+    return
+  }
+
+  entries.forEach(([groupName, total]) => {
+    const row = refs.expenseGroupBody.insertRow()
+    const groupCell = row.insertCell(0)
+    groupCell.appendChild(createGroupBadge(groupName))
+    row.insertCell(1).innerText = money(total)
   })
 }
 
@@ -246,6 +308,7 @@ function renderPlans() {
 function renderAll() {
   renderIncomes()
   renderExpenses()
+  renderExpenseGroups()
   renderPlans()
   renderPlannedMonthlySummary()
   renderSummary()
@@ -268,13 +331,15 @@ function addIncome() {
 
 function addExpense() {
   const name = refs.expenseName.value.trim()
+  const group = refs.expenseGroup.value.trim() || "Без группы"
   const amount = Number(refs.expenseAmount.value)
   if (!name || !Number.isFinite(amount) || amount <= 0) {
     alert("Введите корректные данные расхода")
     return
   }
-  state.expenses.push({ id: uid(), name, amount })
+  state.expenses.push({ id: uid(), name, group, amount })
   refs.expenseName.value = ""
+  refs.expenseGroup.value = ""
   refs.expenseAmount.value = ""
   saveState()
   renderAll()
