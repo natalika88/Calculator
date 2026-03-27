@@ -61,6 +61,7 @@
       <h2>Фактические расходы</h2>
       <div class="grid">
         <input id="expenseName" placeholder="Категория">
+        <input id="expenseGroup" placeholder="Группа (например: Обязательные)">
         <input id="expenseAmount" type="number" min="0" step="0.01" placeholder="Сумма">
       </div>
       <div class="toolbar">
@@ -70,12 +71,25 @@
         <thead>
           <tr>
             <th>Категория</th>
+            <th>Группа</th>
             <th>Сумма</th>
             <th>Удалить</th>
           </tr>
         </thead>
         <tbody id="expenseBody"></tbody>
       </table>
+      <div class="monthly-wrap">
+        <h3>Группировка расходов по группам</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Группа</th>
+              <th>Итого</th>
+            </tr>
+          </thead>
+          <tbody id="expenseGroupBody"></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="section">
@@ -119,7 +133,7 @@
 
     <div class="chart-container">
       <h2>График расходов</h2>
-      <canvas id="expenseChart"></canvas>
+      <canvas id="expenseChart" class="expense-chart-small"></canvas>
     </div>
   </main>
 </div>
