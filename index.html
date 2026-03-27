@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Семейный бюджет | Лендинг и калькулятор</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="page">
+  <section class="hero">
+    <h1>Семейный бюджет без хаоса</h1>
+    <p>Небольшой лендинг + рабочий калькулятор в одном файле. Добавляйте доходы, расходы и планируемые платежи, отслеживайте баланс и смотрите структуру расходов на графике.</p>
+    <div class="hero-actions">
+      <a href="#budgetApp"><button class="btn btn-main" type="button">Перейти к калькулятору</button></a>
+      <button class="btn btn-alt" type="button" id="clearAllBtnTop">Очистить все данные</button>
+    </div>
+  </section>
+
+  <section class="features">
+    <article class="feature">
+      <h3>Удобный старт</h3>
+      <p>Мини-лендинг объясняет, зачем нужен инструмент и как быстро начать вести бюджет.</p>
+    </article>
+    <article class="feature">
+      <h3>Сохранение данных</h3>
+      <p>Доходы, расходы, платежи и тема сохраняются в браузере через localStorage.</p>
+    </article>
+    <article class="feature">
+      <h3>Наглядная аналитика</h3>
+      <p>Круговая диаграмма показывает, куда уходит больше всего денег по категориям.</p>
+    </article>
+  </section>
+
+  <main id="budgetApp" class="container">
+    <h2>Калькулятор семейного бюджета</h2>
+
+    <div class="section">
+      <h2>Доходы</h2>
+      <div class="grid">
+        <input id="incomeName" placeholder="Источник дохода">
+        <input id="incomeAmount" type="number" min="0" step="0.01" placeholder="Сумма">
+      </div>
+      <div class="toolbar">
+        <button id="addIncomeBtn" type="button">Добавить доход</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Источник</th>
+            <th>Сумма</th>
+            <th>Удалить</th>
+          </tr>
+        </thead>
+        <tbody id="incomeBody"></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Фактические расходы</h2>
+      <div class="grid">
+        <input id="expenseName" placeholder="Категория">
+        <input id="expenseAmount" type="number" min="0" step="0.01" placeholder="Сумма">
+      </div>
+      <div class="toolbar">
+        <button id="addExpenseBtn" type="button">Добавить расход</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Категория</th>
+            <th>Сумма</th>
+            <th>Удалить</th>
+          </tr>
+        </thead>
+        <tbody id="expenseBody"></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Планируемые платежи</h2>
+      <div class="grid">
+        <input id="planName" placeholder="Платеж">
+        <input id="planAmount" type="number" min="0" step="0.01" placeholder="Сумма">
+        <input id="planDate" type="date">
+      </div>
+      <div class="toolbar">
+        <button id="addPlanBtn" type="button">Запланировать платеж</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Платеж</th>
+            <th>Сумма</th>
+            <th>Дата оплаты</th>
+            <th>Удалить</th>
+          </tr>
+        </thead>
+        <tbody id="planBody"></tbody>
+      </table>
+      <p class="hint">Платежи с датой в прошлом подсвечиваются.</p>
+      <div class="monthly-wrap">
+        <h3>Итого запланированных расходов по месяцам</h3>
+        <canvas id="plannedMonthlyChart"></canvas>
+        <ul id="plannedMonthlyList" class="monthly-list"></ul>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="metric"><span class="label">Общий доход</span><span id="totalIncome" class="income">0</span></div>
+      <div class="metric"><span class="label">Общие расходы</span><span id="totalExpense" class="expense">0</span></div>
+      <div class="metric"><span class="label">Баланс</span><span id="balance">0</span></div>
+    </div>
+
+    <div class="toolbar">
+      <button id="clearAllBtnBottom" class="danger" type="button">Очистить все данные</button>
+    </div>
+
+    <div class="chart-container">
+      <h2>График расходов</h2>
+      <canvas id="expenseChart"></canvas>
+    </div>
+  </main>
+</div>
+
+<button id="themeToggleBtn" class="theme-toggle" type="button">🌙 Тёмная тема</button>
+
+<script src="./script.js"></script>
+</body>
+</html>
