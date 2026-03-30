@@ -19,6 +19,9 @@ const refs = {
   planName: document.getElementById("planName"),
   planAmount: document.getElementById("planAmount"),
   planDate: document.getElementById("planDate"),
+  planType: document.getElementById("planType"),
+  planPeriod: document.getElementById("planPeriod"),
+  planPeriodWrap: document.getElementById("planPeriodWrap"),
   incomeBody: document.getElementById("incomeBody"),
   expenseBody: document.getElementById("expenseBody"),
   expenseGroupBody: document.getElementById("expenseGroupBody"),
@@ -140,12 +143,96 @@ function monthLabel(monthKey) {
 }
 
 function getPlannedMonthlyTotals() {
-  const monthly = state.plans.reduce((acc, item) => {
-    const key = String(item.date || "").slice(0, 7)
-    if (!key) return acc
-    acc[key] = (acc[key] || 0) + Number(item.amount)
-    return acc
-  }, {})
+  const start = new Date()
+  const horizonStart = new Date(start.getFullYear(), start.getMonth(), start.getDate()) // сегодня, локально
+  const horizonEnd = new Date(horizonStart)
+  horizonEnd.setMonth(horizonEnd.getMonth() + 12) // +12 месяцев
+
+  function parseISODate(dateStr) {
+    const parts = String(dateStr || "").split("-")
+    if (parts.length !== 3) return null
+    const [y, m, d] = parts.map((x) => Number(x))
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null
+    return new Date(y, m - 1, d)
+  }
+
+  function daysInMonth(year, monthIndex) {
+    // monthIndex: 0..11
+    return new Date(year, monthIndex + 1, 0).getDate()
+  }
+
+  function toMonthKey(dt) {
+    const y = dt.getFullYear()
+    const m = String(dt.getMonth() + 1).padStart(2, "0")
+    return `${y}-${m}`
+  }
+
+  function addDays(dt, days) {
+    const x = new Date(dt)
+    x.setDate(x.getDate() + days)
+    return x
+  }
+
+  function addToAcc(acc, dt, amount) {
+    const key = toMonthKey(dt)
+    acc[key] = (acc[key] || 0) + Number(amount)
+  }
+
+  const monthly = {}
+
+  state.plans.forEach((item) => {
+    const startDate = parseISODate(item.date)
+    if (!startDate) return
+
+    const amount = Number(item.amount)
+    if (!Number.isFinite(amount) || amount <= 0) return
+
+    const type = item.type || "once" // backward compatibility
+    const period = item.period || "month"
+
+    if (type === "once") {
+      if (startDate >= horizonStart && startDate <= horizonEnd) addToAcc(monthly, startDate, amount)
+      return
+    }
+
+    if (type === "regular" && period === "month") {
+      const day = startDate.getDate()
+      const firstMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1)
+      const lastMonth = new Date(horizonEnd.getFullYear(), horizonEnd.getMonth(), 1)
+
+      for (
+        let cursor = new Date(firstMonth);
+        cursor <= lastMonth;
+        cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)
+      ) {
+        const y = cursor.getFullYear()
+        const mIndex = cursor.getMonth()
+        const occDay = Math.min(day, daysInMonth(y, mIndex))
+        const occ = new Date(y, mIndex, occDay)
+        if (occ >= horizonStart && occ <= horizonEnd) addToAcc(monthly, occ, amount)
+      }
+
+      return
+    }
+
+    if (type === "regular" && period === "week") {
+      // каждые 7 дней от стартовой даты
+      const msDay = 24 * 60 * 60 * 1000
+      let n = 0
+      if (startDate < horizonStart) {
+        n = Math.ceil((horizonStart - startDate) / (7 * msDay))
+        n = Math.max(0, n)
+      }
+
+      let occ = addDays(startDate, n * 7)
+      while (occ <= horizonEnd) {
+        if (occ >= horizonStart) addToAcc(monthly, occ, amount)
+        occ = addDays(occ, 7)
+      }
+      return
+    }
+  })
+
   return Object.entries(monthly).sort((a, b) => a[0].localeCompare(b[0]))
 }
 
@@ -296,7 +383,18 @@ function renderPlans() {
       row.insertCell(0).innerText = item.name
       row.insertCell(1).innerText = money(item.amount)
       row.insertCell(2).innerText = item.date
-      const action = row.insertCell(3)
+
+      const typeCell = row.insertCell(3)
+      typeCell.innerText = item.type === "regular" ? "Регулярный" : "Разовый"
+
+      const periodCell = row.insertCell(4)
+      if (item.type === "regular") {
+        periodCell.innerText = item.period === "week" ? "Неделя" : "Месяц"
+      } else {
+        periodCell.innerText = "—"
+      }
+
+      const action = row.insertCell(5)
       action.appendChild(createDeleteButton(() => {
         state.plans = state.plans.filter((it) => it.id !== item.id)
         saveState()
@@ -347,18 +445,43 @@ function addExpense() {
 
 function addPlan() {
   const name = refs.planName.value.trim()
+  const type = refs.planType.value
+  const period = refs.planPeriod.value
   const amount = Number(refs.planAmount.value)
   const date = refs.planDate.value
   if (!name || !Number.isFinite(amount) || amount <= 0 || !date) {
     alert("Введите корректные данные платежа")
     return
   }
-  state.plans.push({ id: uid(), name, amount, date })
+
+  state.plans.push({
+    id: uid(),
+    name,
+    amount,
+    date,
+    type,
+    period: type === "regular" ? period : null
+  })
   refs.planName.value = ""
   refs.planAmount.value = ""
   refs.planDate.value = ""
+
+  // вернем дефолтные значения формы
+  refs.planType.value = "once"
+  refs.planPeriod.value = "month"
+  syncPlanTypeUI()
+
   saveState()
   renderAll()
+}
+
+function syncPlanTypeUI() {
+  const isRegular = refs.planType.value === "regular"
+  if (isRegular) {
+    refs.planPeriodWrap.classList.remove("hidden")
+  } else {
+    refs.planPeriodWrap.classList.add("hidden")
+  }
 }
 
 function clearAllData() {
@@ -376,6 +499,7 @@ function bindEvents() {
   document.getElementById("clearAllBtnTop").addEventListener("click", clearAllData)
   document.getElementById("clearAllBtnBottom").addEventListener("click", clearAllData)
   refs.themeToggleBtn.addEventListener("click", toggleTheme)
+  refs.planType.addEventListener("change", syncPlanTypeUI)
   ;[refs.incomeAmount, refs.expenseAmount, refs.planAmount].forEach((input) => {
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -390,6 +514,7 @@ function bindEvents() {
 function init() {
   createChart()
   createPlannedMonthlyChart()
+  syncPlanTypeUI()
   applyTheme(localStorage.getItem(THEME_KEY) || "light")
   loadState()
   bindEvents()

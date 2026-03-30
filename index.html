@@ -98,6 +98,16 @@
         <input id="planName" placeholder="Платеж">
         <input id="planAmount" type="number" min="0" step="0.01" placeholder="Сумма">
         <input id="planDate" type="date">
+        <select id="planType">
+          <option value="once" selected>Разовый</option>
+          <option value="regular">Регулярный</option>
+        </select>
+        <div id="planPeriodWrap" class="hidden">
+          <select id="planPeriod">
+            <option value="month" selected>Месяц</option>
+            <option value="week">Неделя</option>
+          </select>
+        </div>
       </div>
       <div class="toolbar">
         <button id="addPlanBtn" type="button">Запланировать платеж</button>
@@ -108,6 +118,8 @@
             <th>Платеж</th>
             <th>Сумма</th>
             <th>Дата оплаты</th>
+            <th>Тип</th>
+            <th>Период</th>
             <th>Удалить</th>
           </tr>
         </thead>

@@ -149,6 +149,19 @@ border:1px solid var(--border);
 border-radius:8px;
 }
 
+select{
+width:100%;
+padding:10px;
+background:var(--input-bg);
+color:var(--input-text);
+border:1px solid var(--border);
+border-radius:8px;
+}
+
+.hidden{
+display:none;
+}
+
 .toolbar{
 display:flex;
 gap:8px;
