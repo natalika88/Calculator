@@ -182,6 +182,16 @@ button:hover{
 background:#1b5fbf;
 }
 
+button.muted{
+background:var(--card-bg);
+color:var(--text);
+border:1px solid var(--border);
+}
+
+button.muted:hover{
+filter:brightness(0.97);
+}
+
 .danger{
 background:var(--danger);
 }

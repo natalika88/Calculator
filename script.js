@@ -9,6 +9,7 @@ let state = {
 
 let chart
 let plannedMonthlyChart
+let editingPlanId = null
 
 const refs = {
   incomeName: document.getElementById("incomeName"),
@@ -22,6 +23,8 @@ const refs = {
   planType: document.getElementById("planType"),
   planPeriod: document.getElementById("planPeriod"),
   planPeriodWrap: document.getElementById("planPeriodWrap"),
+  addPlanBtn: document.getElementById("addPlanBtn"),
+  cancelPlanEditBtn: document.getElementById("cancelPlanEditBtn"),
   incomeBody: document.getElementById("incomeBody"),
   expenseBody: document.getElementById("expenseBody"),
   expenseGroupBody: document.getElementById("expenseGroupBody"),
@@ -281,6 +284,14 @@ function createDeleteButton(onDelete) {
   return btn
 }
 
+function createEditButton(onEdit) {
+  const btn = document.createElement("button")
+  btn.type = "button"
+  btn.innerText = "Изменить"
+  btn.addEventListener("click", onEdit)
+  return btn
+}
+
 function colorByGroup(groupName) {
   const palette = [
     { bg: "#dbeafe", text: "#1e3a8a", border: "#93c5fd" },
@@ -394,8 +405,12 @@ function renderPlans() {
         periodCell.innerText = "—"
       }
 
-      const action = row.insertCell(5)
+      const editCell = row.insertCell(5)
+      editCell.appendChild(createEditButton(() => beginPlanEdit(item)))
+
+      const action = row.insertCell(6)
       action.appendChild(createDeleteButton(() => {
+        if (editingPlanId === item.id) cancelPlanEdit()
         state.plans = state.plans.filter((it) => it.id !== item.id)
         saveState()
         renderAll()
@@ -454,22 +469,36 @@ function addPlan() {
     return
   }
 
-  state.plans.push({
-    id: uid(),
-    name,
-    amount,
-    date,
-    type,
-    period: type === "regular" ? period : null
-  })
-  refs.planName.value = ""
-  refs.planAmount.value = ""
-  refs.planDate.value = ""
-
-  // вернем дефолтные значения формы
-  refs.planType.value = "once"
-  refs.planPeriod.value = "month"
-  syncPlanTypeUI()
+  if (editingPlanId) {
+    const plan = state.plans.find((p) => p.id === editingPlanId)
+    if (!plan) {
+      cancelPlanEdit()
+      saveState()
+      renderAll()
+      return
+    }
+    plan.name = name
+    plan.amount = amount
+    plan.date = date
+    plan.type = type
+    plan.period = type === "regular" ? period : null
+    cancelPlanEdit()
+  } else {
+    state.plans.push({
+      id: uid(),
+      name,
+      amount,
+      date,
+      type,
+      period: type === "regular" ? period : null
+    })
+    refs.planName.value = ""
+    refs.planAmount.value = ""
+    refs.planDate.value = ""
+    refs.planType.value = "once"
+    refs.planPeriod.value = "month"
+    syncPlanTypeUI()
+  }
 
   saveState()
   renderAll()
@@ -484,9 +513,44 @@ function syncPlanTypeUI() {
   }
 }
 
+function syncPlanEditToolbar() {
+  if (editingPlanId) {
+    refs.addPlanBtn.innerText = "Сохранить изменения"
+    refs.cancelPlanEditBtn.classList.remove("hidden")
+  } else {
+    refs.addPlanBtn.innerText = "Запланировать платеж"
+    refs.cancelPlanEditBtn.classList.add("hidden")
+  }
+}
+
+function beginPlanEdit(item) {
+  editingPlanId = item.id
+  refs.planName.value = item.name
+  refs.planAmount.value = String(item.amount)
+  refs.planDate.value = item.date
+  const type = item.type === "regular" ? "regular" : "once"
+  refs.planType.value = type
+  refs.planPeriod.value = item.period === "week" ? "week" : "month"
+  syncPlanTypeUI()
+  syncPlanEditToolbar()
+  refs.planName.focus()
+}
+
+function cancelPlanEdit() {
+  editingPlanId = null
+  refs.planName.value = ""
+  refs.planAmount.value = ""
+  refs.planDate.value = ""
+  refs.planType.value = "once"
+  refs.planPeriod.value = "month"
+  syncPlanTypeUI()
+  syncPlanEditToolbar()
+}
+
 function clearAllData() {
   const accepted = confirm("Удалить все записи бюджета?")
   if (!accepted) return
+  cancelPlanEdit()
   state = { incomes: [], expenses: [], plans: [] }
   saveState()
   renderAll()
@@ -495,7 +559,8 @@ function clearAllData() {
 function bindEvents() {
   document.getElementById("addIncomeBtn").addEventListener("click", addIncome)
   document.getElementById("addExpenseBtn").addEventListener("click", addExpense)
-  document.getElementById("addPlanBtn").addEventListener("click", addPlan)
+  refs.addPlanBtn.addEventListener("click", addPlan)
+  refs.cancelPlanEditBtn.addEventListener("click", cancelPlanEdit)
   document.getElementById("clearAllBtnTop").addEventListener("click", clearAllData)
   document.getElementById("clearAllBtnBottom").addEventListener("click", clearAllData)
   refs.themeToggleBtn.addEventListener("click", toggleTheme)
@@ -515,6 +580,7 @@ function init() {
   createChart()
   createPlannedMonthlyChart()
   syncPlanTypeUI()
+  syncPlanEditToolbar()
   applyTheme(localStorage.getItem(THEME_KEY) || "light")
   loadState()
   bindEvents()
